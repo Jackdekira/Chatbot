@@ -10,7 +10,7 @@ class CharacterAI:
         self.profile_image_path = profile_image_path
         self.model_name = model_name
         self.history = []
-        genai.configure(api_key=userdata.get('SECRET_GEMINI'))
+        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
     def generate_response(self, prompt):
         try:
             model = genai.GenerativeModel(self.model_name)
