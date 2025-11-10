@@ -1,0 +1,73 @@
+<!doctype html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Character AI Creator - Minimal</title>
+      <style>
+        body { font-family: Arial, sans-serif; background:#0e1117; color:#ddd; padding:20px; }
+        .card { background:#111217; padding:16px; border-radius:8px; margin-bottom:12px; }
+        input, textarea { width:100%; padding:8px; border-radius:6px; border:1px solid #333; background:#0b0c0f; color:#fff; }
+        button { padding:8px 12px; border-radius:6px; cursor:pointer; }
+      </style>
+    </head>
+    <body>
+      <h2>Character AI Creator</h2>
+      <div class="card">
+        <h3>Crear personaje</h3>
+        <input id="name" placeholder="Nombre">
+        <textarea id="personality" placeholder="Personalidad" rows="4"></textarea>
+        <textarea id="greeting" placeholder="Saludo inicial" rows="2"></textarea>
+        <input id="profile_image" placeholder="Imagen (subir a data/character_images y poner nombre.ext)">
+        <button onclick="create()">Crear</button>
+      </div>
+
+      <div class="card" id="chat_card" style="display:none;">
+        <h3 id="chat_title"></h3>
+        <div id="messages" style="height:300px; overflow:auto; background:#08090b; padding:8px; border-radius:6px;"></div>
+        <input id="msg" placeholder="Escribir mensaje...">
+        <button onclick="send()">Enviar</button>
+        <button onclick="saveChat()">Guardar Chat</button>
+      </div>
+
+      <script>
+      let current_uid = null;
+
+      async function create(){
+        const payload = {
+          name: document.getElementById('name').value,
+          personality: document.getElementById('personality').value,
+          greeting: document.getElementById('greeting').value,
+          profile_image_path: document.getElementById('profile_image').value,
+          model_name: 'gemini-2.0-flash'
+        };
+        const res = await fetch('/api/create_character', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+        const j = await res.json();
+        if(j.status==='ok'){
+          current_uid = j.unique_id;
+          document.getElementById('chat_card').style.display = 'block';
+          document.getElementById('chat_title').innerText = 'Chat con ' + payload.name;
+          document.getElementById('messages').innerHTML = j.messages.map(m=>'<div><b>'+m.character+':</b> '+m.content+'</div>').join('');
+        } else alert('error');
+      }
+
+      async function send(){
+        const text = document.getElementById('msg').value;
+        const res = await fetch('/api/send_message', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({unique_id:current_uid, text})});
+        const j = await res.json();
+        if(j.status==='ok'){
+          const box = document.getElementById('messages');
+          box.innerHTML += '<div style="margin-top:6px;"><b>Tú:</b> '+text+'</div>';
+          box.innerHTML += '<div style="margin-top:6px;"><b>Bot:</b> '+j.response+'</div>';
+          box.scrollTop = box.scrollHeight;
+          document.getElementById('msg').value = '';
+        } else alert('error sending');
+      }
+
+      async function saveChat(){
+        const res = await fetch('/api/save_chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({unique_id:current_uid})});
+        const j = await res.json();
+        alert('Save: ' + JSON.stringify(j));
+      }
+      </script>
+    </body>
+    </html>
